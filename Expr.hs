@@ -1,6 +1,6 @@
 import Parsing
 import Prelude 
-import Data.Char(isSpace,isDigit)
+import Data.Char(isSpace,isDigit,toLower)
 ------ EX
 ex1 = Mul (Add Var (Num 2)) Var 
 ex2 = Add Var (Mul (Num 2) Var )
@@ -60,7 +60,7 @@ eval (Cos e) x = Prelude.cos $ eval e x
 
 readExpr :: String -> Maybe Expr
 readExpr s = 
-    let s' = filter (not.isSpace) s in 
+    let s' = map toLower $ filter (not.isSpace) s in 
         case parse expr s' of
             Just (e, "") -> Just e
             otherwise -> Nothing
@@ -68,36 +68,50 @@ readExpr s =
 
 
 
+number :: Parser Double
+number = read <$> oneOrMore (sat (\x -> (isDigit x ||  (x =='.') || (x == '-'))))
 
-number = read <$> oneOrMore (sat (\x -> (isDigit x ||  (x =='.'))))
+sinus :: Parser Expr
+sinus = do
+  c1 <- char 's'
+  c2 <- char 'i'
+  c3 <- char 'n'
+  expr
 
-func c1 c2 c3 f = do 
-  c1 <- char c1
+cosine:: Parser Expr
+cosine = do
+  c1 <- char 'c'
+  c2 <- char 'o'
+  c3 <- char 's'
+  expr
 
-expr, term, factor, func, var :: Parser Expr
+expr, term, factor, var :: Parser Expr
 expr   = foldl1 Add <$> chain term (char '+')
 term   = foldl1 Mul <$> chain factor (char '*')
-factor =  Num <$> number  <|> var <|>  char '(' *> expr <* char ')'
-func = undefined
+factor =  Num <$> number <|> var <|> Sin <$> sinus <|> Cos <$> cosine <|> char '(' *> expr <* char ')'
 var = do 
-  t <-  (sat (\x -> x == 'x'))
+  t <-  (sat (\x -> (x == 'x' || x == '-')))
   return Var
 
-prop_readShow_valid :: Expr -> Bool
-prop_readShow_valid e = case readExpr (showExpr e) of
-                  Just (e') -> e' == e || e' == assoc e
-                  _         -> False 
-  where
-    assoc :: Expr -> Expr
-    assoc (Add (Add e1 e2) e3) = assoc (Add e1 (Add e2 e3))
-    assoc (Add e1          e2) = Add (assoc e1) (assoc e2)
-    assoc (Mul e1 e2)          = Mul (assoc e1) (assoc e2)
-    assoc (Sin e)              = Sin (assoc e)
-    assoc (Cos e)              = Cos (assoc e)
-    assoc (Var)                = Var  
-    assoc (Num n)              = Num n
-
 -------------------- E
+prop_ShowReadExpr :: Expr -> Bool
+prop_ShowReadExpr e = case readExpr (showExpr e) of
+  Just (e') -> e' == e || e' == assoc e
+  _         -> False 
+where
+assoc :: Expr -> Expr
+assoc (Add (Add e1 e2) e3) = assoc (Add e1 (Add e2 e3))
+assoc (Add e1          e2) = Add (assoc e1) (assoc e2)
+assoc (Mul e1 e2)          = Mul (assoc e1) (assoc e2)
+assoc (Sin e)              = Sin (assoc e)
+assoc (Cos e)              = Cos (assoc e)
+assoc (Var)                = Var  
+assoc (Num n)              = Num n
+
+
+
+arbExpr :: Int -> Gen Expr
+
 
 -------------------- F
 
