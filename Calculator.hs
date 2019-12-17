@@ -2,6 +2,7 @@
 -- Calculator as described in Part II of the Standard Lab. You can use this
 -- directly, or just study it as an example of how to use threepenny-gui.
 import ThreepennyPages
+import Expr 
 import Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny as UI
 canWidth,canHeight :: Num a => a

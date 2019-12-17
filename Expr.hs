@@ -1,7 +1,12 @@
+module Expr(
+  Expr,eval,showExpr,readExpr,simplify,differentiate
+) where
+
 import Parsing
 import Prelude 
 import Data.Char(isSpace,isDigit,toLower)
 import Test.QuickCheck
+
 ------ EX
 ex1 = Mul (Add Var (Num 2)) Var 
 ex2 = Add Var (Mul (Num 2) Var )
@@ -13,7 +18,7 @@ data Expr = Num Double
           | Mul Expr Expr
           | Sin Expr
           | Cos Expr
-          deriving(Eq,Show)
+          deriving(Eq)
 
 
           
@@ -44,8 +49,8 @@ showExpr (Mul e e') =
   where 
     showFactor (Add e1 e2) = "(" ++ showExpr (Add e1 e2) ++ ")"
     showFactor e           = showExpr e
---instance Show Expr
---  where show = showExpr
+instance Show Expr
+  where show = showExpr
 
 
 -------------------- C
@@ -141,16 +146,16 @@ simplify e = simplify' e False
     simplify' (Var) _ = Var
     simplify' (Num n) _ = Num n
 
-    simplify' (Add (Num 0) e) _ = e
-    simplify' (Add e (Num 0)) _ = e
+    simplify' (Add (Num 0) e) True = e
+    simplify' (Add e (Num 0)) True = e
     simplify' (Add (Num n1) (Num n2)) _ = Num (n1 + n2)
     simplify' (Add e1 e2) False = simplify' (Add (simplify' e1 False) (simplify' e2 False)) True
     simplify' (Add e1 e2) True = Add e1 e2
 
     simplify' (Mul (Num 0) _) _ = Num 0
     simplify' (Mul _ (Num 0)) _ = Num 0
-    simplify' (Mul (Num 1) e) _ = e
-    simplify' (Mul e (Num 1)) _ = e
+    simplify' (Mul (Num 1) e) True = e
+    simplify' (Mul e (Num 1)) True = e
     simplify' (Mul (Num n1) (Num n2)) _ = Num (n1 * n2)
     simplify' (Mul e1 e2) False = simplify' (Mul (simplify' e1 False) (simplify' e2 False)) True
     simplify' (Mul e1 e2) True = Mul e1 e2
@@ -166,10 +171,10 @@ simplify e = simplify' e False
 -------------------- G
 
 differentiate :: Expr -> Expr
-differentiate = differentiate'
+differentiate = simplify.differentiate'
     where
-      differentiate' (Num n) = Num 1
-      differentiate' (Var) = Num 0
+      differentiate' (Num n) = Num 0
+      differentiate' (Var) = Num 1
       differentiate' (Add e1 e2) = Add (differentiate' e1) (differentiate' e2)
       differentiate' (Mul e1 e2) = Add (Mul (differentiate' e1) e2) (Mul e1 (differentiate' e2))
       differentiate' (Cos e) = Mul (Mul (Num (-1)) (Sin e)) (differentiate' e)
