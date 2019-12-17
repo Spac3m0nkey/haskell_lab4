@@ -13,7 +13,7 @@ data Expr = Num Double
           | Mul Expr Expr
           | Sin Expr
           | Cos Expr
-          deriving(Eq)
+          deriving(Eq,Show)
 
 
           
@@ -44,8 +44,8 @@ showExpr (Mul e e') =
   where 
     showFactor (Add e1 e2) = "(" ++ showExpr (Add e1 e2) ++ ")"
     showFactor e           = showExpr e
-instance Show Expr
-  where show = showExpr
+--instance Show Expr
+--  where show = showExpr
 
 
 -------------------- C
@@ -131,31 +131,49 @@ instance Arbitrary Expr where
   arbitrary = sized arbExpr
 -------------------- F
 
+type Simplfied = Bool
+
+
 simplify :: Expr -> Expr
-simplify (Var) = Var
-simplify (Num n) = Num n
+simplify e = simplify' e False
+  where
+    simplify' :: Expr -> Simplfied -> Expr
+    simplify' (Var) _ = Var
+    simplify' (Num n) _ = Num n
 
-simplify (Add (Num 0) e) = e
-simplify (Add e (Num 0)) = e
-simplify (Add (Num n1) (Num n2)) = Num (n1 + n2)
-simplify (Add e1 e2) = Add (simplify e1) (simplify e2)
+    simplify' (Add (Num 0) e) _ = e
+    simplify' (Add e (Num 0)) _ = e
+    simplify' (Add (Num n1) (Num n2)) _ = Num (n1 + n2)
+    simplify' (Add e1 e2) False = simplify' (Add (simplify' e1 False) (simplify' e2 False)) True
+    simplify' (Add e1 e2) True = Add e1 e2
 
-simplify (Mul (Num 0) _) = Num 0
-simplify (Mul _ (Num 0)) = Num 0
-simplify (Mul (Num 1) e) = e
-simplify (Mul e (Num 1)) = e
-simplify (Mul (Num n1) (Num n2)) = Num (n1 + n2)
-simplify (Mul e1 e2) = Mul (simplify e1) (simplify e2)
+    simplify' (Mul (Num 0) _) _ = Num 0
+    simplify' (Mul _ (Num 0)) _ = Num 0
+    simplify' (Mul (Num 1) e) _ = e
+    simplify' (Mul e (Num 1)) _ = e
+    simplify' (Mul (Num n1) (Num n2)) _ = Num (n1 * n2)
+    simplify' (Mul e1 e2) False = simplify' (Mul (simplify' e1 False) (simplify' e2 False)) True
+    simplify' (Mul e1 e2) True = Mul e1 e2
 
-simplify (Sin (Num n)) = Num (Prelude.sin n)
-simplify (Sin e) = Sin (simplify e)
+    simplify' (Sin (Num n)) _ = Num (Prelude.sin n)
+    simplify' (Sin e) False = simplify' (Sin (simplify' e False)) True
+    simplify' (Sin e) True = Sin e
 
-simplify (Cos (Num n)) = Num (Prelude.cos n)
-simplify (Cos e) = Cos (simplify e)
-
-
+    simplify' (Cos (Num n)) _ = Num (Prelude.cos n)
+    simplify' (Cos e) False = simplify' (Cos (simplify' e False)) True
+    simplify' (Cos e) True = Cos e
 
 -------------------- G
+
+differentiate :: Expr -> Expr
+differentiate = differentiate'
+    where
+      differentiate' (Num n) = Num 1
+      differentiate' (Var) = Num 0
+      differentiate' (Add e1 e2) = Add (differentiate' e1) (differentiate' e2)
+      differentiate' (Mul e1 e2) = Add (Mul (differentiate' e1) e2) (Mul e1 (differentiate' e2))
+      differentiate' (Cos e) = Mul (Mul (Num (-1)) (Sin e)) (differentiate' e)
+      differentiate' (Sin e) = Mul (Cos e) (differentiate' e)
 
 -------------------- DONE
 
