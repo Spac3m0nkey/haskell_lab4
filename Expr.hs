@@ -1,6 +1,7 @@
 import Parsing
 import Prelude 
 import Data.Char(isSpace,isDigit,toLower)
+import Test.QuickCheck
 ------ EX
 ex1 = Mul (Add Var (Num 2)) Var 
 ex2 = Add Var (Mul (Num 2) Var )
@@ -12,7 +13,7 @@ data Expr = Num Double
           | Mul Expr Expr
           | Sin Expr
           | Cos Expr
-          deriving(Eq,Show)
+          deriving(Eq)
 
 
           
@@ -43,8 +44,8 @@ showExpr (Mul e e') =
   where 
     showFactor (Add e1 e2) = "(" ++ showExpr (Add e1 e2) ++ ")"
     showFactor e           = showExpr e
---instance Show Expr
-  --where show = showExpr
+instance Show Expr
+  where show = showExpr
 
 
 -------------------- C
@@ -98,22 +99,61 @@ prop_ShowReadExpr :: Expr -> Bool
 prop_ShowReadExpr e = case readExpr (showExpr e) of
   Just (e') -> e' == e || e' == assoc e
   _         -> False 
-where
-assoc :: Expr -> Expr
-assoc (Add (Add e1 e2) e3) = assoc (Add e1 (Add e2 e3))
-assoc (Add e1          e2) = Add (assoc e1) (assoc e2)
-assoc (Mul e1 e2)          = Mul (assoc e1) (assoc e2)
-assoc (Sin e)              = Sin (assoc e)
-assoc (Cos e)              = Cos (assoc e)
-assoc (Var)                = Var  
-assoc (Num n)              = Num n
-
+  where
+    assoc :: Expr -> Expr
+    assoc (Add (Add e1 e2) e3) = assoc (Add e1 (Add e2 e3))
+    assoc (Add e1          e2) = Add (assoc e1) (assoc e2)
+    assoc (Mul e1 e2)          = Mul (assoc e1) (assoc e2)
+    assoc (Sin e)              = Sin (assoc e)
+    assoc (Cos e)              = Cos (assoc e)
+    assoc (Var)                = Var  
+    assoc (Num n)              = Num n
 
 
 arbExpr :: Int -> Gen Expr
+arbExpr i = frequency [(1, rNum), (i, rBin i), (i `div` 2, rFunc i)] 
+  where
+    range = 4
+    rNum = elements $ map Num [-range..range]
+    rBin s = do
+      let s' = s `div` 2
+      op <- elements [Add, Mul]
+      e1 <- arbExpr s' 
+      e2 <- arbExpr s' 
+      return $ op e1 e2
+    rFunc d = do
+      let d' = d `div` 2
+      op <- elements [Sin, Cos]
+      e <- arbExpr d'
+      return $ op e
 
-
+instance Arbitrary Expr where
+  arbitrary = sized arbExpr
 -------------------- F
+
+simplify :: Expr -> Expr
+simplify (Var) = Var
+simplify (Num n) = Num n
+
+simplify (Add (Num 0) e) = e
+simplify (Add e (Num 0)) = e
+simplify (Add (Num n1) (Num n2)) = Num (n1 + n2)
+simplify (Add e1 e2) = Add (simplify e1) (simplify e2)
+
+simplify (Mul (Num 0) _) = Num 0
+simplify (Mul _ (Num 0)) = Num 0
+simplify (Mul (Num 1) e) = e
+simplify (Mul e (Num 1)) = e
+simplify (Mul (Num n1) (Num n2)) = Num (n1 + n2)
+simplify (Mul e1 e2) = Mul (simplify e1) (simplify e2)
+
+simplify (Sin (Num n)) = Num (Prelude.sin n)
+simplify (Sin e) = Sin (simplify e)
+
+simplify (Cos (Num n)) = Num (Prelude.cos n)
+simplify (Cos e) = Cos (simplify e)
+
+
 
 -------------------- G
 
