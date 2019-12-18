@@ -1,5 +1,6 @@
 module Expr(
-  Expr,eval,showExpr,readExpr,simplify,differentiate
+  Expr(Num, Var, Add, Mul, Sin, Cos),
+  eval,showExpr,readExpr,simplify,differentiate
 ) where
 
 import Parsing
@@ -7,11 +8,12 @@ import Prelude
 import Data.Char(isSpace,isDigit,toLower)
 import Test.QuickCheck
 
------- EX
+------ Examples
 ex1 = Mul (Add Var (Num 2)) Var 
 ex2 = Add Var (Mul (Num 2) Var )
 ex3 = Num (-5) `Add` (Num 2 `Mul` Num 4)
 -------------------- A
+-- Represents an expression
 data Expr = Num Double
           | Var 
           | Add Expr Expr
@@ -20,8 +22,6 @@ data Expr = Num Double
           | Cos Expr
           deriving(Eq)
 
-
-          
 x :: Expr
 x = Var
           
@@ -37,6 +37,8 @@ sin e1 = Sin e1
 cos e1 = Cos e1 
 
 -------------------- B
+
+-- Returns a string representation of an expression
 showExpr :: Expr -> String
 showExpr (Num n) = show n
 showExpr (Var) =  "x"
@@ -54,6 +56,7 @@ instance Show Expr
 
 
 -------------------- C
+-- Evaluates an expression
 eval :: Expr -> Double -> Double 
 eval Var x = x
 eval (Num n) _ = n
@@ -64,6 +67,7 @@ eval (Cos e) x = Prelude.cos $ eval e x
 
 -------------------- D
 
+-- Parses a string to an expression
 readExpr :: String -> Maybe Expr
 readExpr s = 
     let s' = map toLower $ filter (not.isSpace) s in 
@@ -71,12 +75,12 @@ readExpr s =
             Just (e, "") -> Just e
             otherwise -> Nothing
 
-
-
-
+-- Parses a number (-, ., digits)
 number :: Parser Double
-number = read <$> oneOrMore (sat (\x -> (isDigit x ||  (x =='.') || (x == '-'))))
+number = read <$> 
+  oneOrMore (sat (\x -> (isDigit x ||  (x =='.') || (x == '-'))))
 
+-- Parses a sinus function
 sinus :: Parser Expr
 sinus = do
   c1 <- char 's'
@@ -84,6 +88,7 @@ sinus = do
   c3 <- char 'n'
   expr
 
+-- Parses a cosine function
 cosine:: Parser Expr
 cosine = do
   c1 <- char 'c'
@@ -91,15 +96,23 @@ cosine = do
   c3 <- char 's'
   expr
 
+-- Parses expressions 
 expr, term, factor, var :: Parser Expr
 expr   = foldl1 Add <$> chain term (char '+')
 term   = foldl1 Mul <$> chain factor (char '*')
-factor =  Num <$> number <|> var <|> Sin <$> sinus <|> Cos <$> cosine <|> char '(' *> expr <* char ')'
+factor =  
+  Num <$> number 
+  <|> var 
+  <|> Sin <$> sinus 
+  <|> Cos <$> cosine 
+  <|> char '(' *> expr <* char ')'
 var = do 
   t <-  (sat (\x -> (x == 'x' || x == '-')))
   return Var
 
 -------------------- E
+
+-- Property that validates that show and read works
 prop_ShowReadExpr :: Expr -> Bool
 prop_ShowReadExpr e = case readExpr (showExpr e) of
   Just (e') -> e' == e || e' == assoc e
@@ -114,7 +127,7 @@ prop_ShowReadExpr e = case readExpr (showExpr e) of
     assoc (Var)                = Var  
     assoc (Num n)              = Num n
 
-
+-- Generates an arbitrary expression based on a sized parameter
 arbExpr :: Int -> Gen Expr
 arbExpr i = frequency [(1, rNum), (i, rBin i), (i `div` 2, rFunc i)] 
   where
@@ -136,9 +149,10 @@ instance Arbitrary Expr where
   arbitrary = sized arbExpr
 -------------------- F
 
+-- Represents if the expression has been simplified
 type Simplfied = Bool
 
-
+-- Simplifies an expression
 simplify :: Expr -> Expr
 simplify e = simplify' e False
   where
@@ -170,6 +184,7 @@ simplify e = simplify' e False
 
 -------------------- G
 
+-- Derives an expression
 differentiate :: Expr -> Expr
 differentiate = simplify.differentiate'
     where
