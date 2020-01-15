@@ -40,7 +40,7 @@ data Expr = Num Double
           | Var 
           | BinOperation BinOperator Expr Expr
           | Function FuncType Expr
-          deriving(Eq,Show)
+          deriving(Eq)
 
 x :: Expr
 x = Var
@@ -61,7 +61,9 @@ cos = Function Cos
 -- Returns a string representation of an expression
 showExpr :: Expr -> String
 showExpr (Num n)                 = show n
-showExpr Var                     =  "x"
+showExpr Var                     = "x"
+showExpr (Function t Var)        = show t ++ " "  ++ showExpr Var              
+showExpr (Function t (Num n))    = show t ++ " "  ++ showExpr (Num n)       
 showExpr (Function t e)          = show t ++ " (" ++ showExpr e ++ ")"
 showExpr (BinOperation op e1 e2) = showPrecedence op e1  ++ " " ++ show op ++ " " ++ showPrecedence op e2
   where 
@@ -70,8 +72,8 @@ showExpr (BinOperation op e1 e2) = showPrecedence op e1  ++ " " ++ show op ++ " 
      | (getBinPrec op1) > (getBinPrec op2) =  "(" ++ showExpr (BinOperation op2 e1 e2) ++ ")"
      | otherwise                           =  showExpr (BinOperation op2 e1 e2)
     showPrecedence _ e = showExpr e
---instance Show Expr where 
-  --show = showExpr
+instance Show Expr where 
+  show = showExpr
 
 
 -------------------- C
