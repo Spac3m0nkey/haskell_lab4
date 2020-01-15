@@ -20,13 +20,14 @@ setup window =
      draw    <- mkButton "Draw graph"         -- The draw button
      slider  <- mkSlider (1, 100) 4           -- The scale slider
      diff    <- mkButton "Differentiate"       -- Differentiate button
+     lbl     <- mkHTML "<p>Zoom</p>"
        -- The markup "<i>...</i>" means that the text inside should be rendered
        -- in italics.
      -- Add the user interface elements to the page, creating a specific layout
      formula <- row [pure fx,pure input]
      ctrl <- row [pure draw, pure diff]
      getBody window 
-      #+ [column [pure canvas,pure formula,pure slider,pure ctrl]]
+      #+ [column [pure canvas,pure formula,pure lbl,pure slider,pure ctrl]]
      -- Styling
      getBody window # set style [("backgroundColor","lightblue"),
                                  ("textAlign","center")]
@@ -47,7 +48,7 @@ readAndDraw formulaInput scaleInput canvas =
      formula <- get value formulaInput
      -- Get the scale
      scaleString <- get value scaleInput
-     let scale = (fromInteger (read scaleString)) / 100.0
+     let scale = fromInteger (read scaleString) / 100.0
      -- Clear the canvas
      clearCanvas canvas
      -- The following code draws the formula text in the canvas and a blue line.
@@ -60,6 +61,6 @@ readAndDraw formulaInput scaleInput canvas =
      path "blue" ps canvas 
 
 points :: Expr -> Double -> (Int,Int) -> [Point]
-points e s (w, h) = let (w', h') = 
-  ((fromIntegral w) / 2.0,((fromIntegral h) / 2.0)) in
-    map (\x ->  (x + w', (((eval e (x * s))/s) * (-1.0)) + h')) [-w'..w']
+points e s (w, h) = 
+  let (w', h') = (fromIntegral w / 2.0,fromIntegral h / 2.0) in
+    map (\x ->  (x + w', ((eval e (x * s) / s) * (-1.0)) + h')) [-w'..w']
