@@ -2,7 +2,7 @@ module Expr(
   BinOperator(Add,Mul),
   FuncType(Sin,Cos),
   Expr(Num, Var, BinOperation, Function),
-  eval,showExpr,readExpr,simplify,differentiate
+  eval,showExpr,readExpr,simplify,differentiate,x,num,add,mul,sin,cos
 ) where
 
 import Parsing
